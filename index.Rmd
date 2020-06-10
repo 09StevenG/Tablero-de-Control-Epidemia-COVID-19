@@ -1,5 +1,5 @@
 ---
-title: "Tablero de Control"
+title: "Tablero de Control Epidemia COVID-19"
 output: 
   flexdashboard::flex_dashboard:
     orientation: columns
@@ -7,31 +7,110 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+
 library(flexdashboard)
+library(sf)
+library(leaflet)
+library(knitr)
+library(kableExtra)
+library(dplyr)
+library(RColorBrewer)
+library(tidyr)
+
+
+# Registros de presencia casos confirmados COVID 19
+covid19_cantones = st_read( "https://raw.githubusercontent.com/geoprocesamiento-2020i/datos/master/covid19/casos/cr/cr-covid19-cantones.geojson")
+
 ```
 
 Column {data-width=500}
 -----------------------------------------------------------------------
-
-### Chart A
+### Mapa de distribución casos confirmados COVID-19 por canton
 
 ```{r}
+
+pale <- colorNumeric(palette = "Green",
+                     domain = covid19_cantones$confirmados)
+
+leaflet(covid19_cantones)%>%
+  addTiles()%>%
+  setView(lat=10,lng = -83.7534256, zoom=7) %>%
+addPolygons(
+  fillColor= ~pale(confirmados),
+  stroke = TRUE,
+  fillOpacity = 0.9,
+  color= "white",
+  weight=0.3,
+  popup = paste("Canton:",covid19_cantones$canton, "<br>",
+                "Confirmados: ",covid19_cantones$confirmados, "<br>",
+                "Fallecidos: ",covid19_cantones$fallecidos, "<br>",
+                "Recuperados: ",covid19_cantones$recuperados, "<br>",
+                "Activos: ",covid19_cantones$activos, "<br>"))
 
 ```
 
 Column {data-width=500}
 -----------------------------------------------------------------------
-
-### Chart B
+### Gráfico casos COVID 19 por provincia
 
 ```{r}
+library("graphics")
+library("ggplot2")
+
+
+covid_provinciass <- aggregate(
+         covid19_cantones["confirmados"], 
+         by = list(covid19_cantones$provincia), 
+         FUN = sum, 
+         na.rm = TRUE)
+
+ ggplot(covid_provinciass, aes(x=reorder(Group.1, -confirmados), y=confirmados)) +
+     ggtitle("Casos confirmados de Covid-19 por provincia") +
+     xlab("Casos provincia") + 
+     ylab("Casos confirmados") +  
+     geom_col() +
+     geom_text(aes(label=confirmados), vjust=-0.3, size=3.5)
 
 ```
 
-### Chart C
-
+### Mapa de distribución casos confirmados COVID-19 por provincia
 ```{r}
+covid_provinciass <- aggregate(
+         covid19_cantones["confirmados"], 
+         by = list(covid19_cantones$provincia), 
+         FUN = sum, 
+         na.rm = TRUE)
 
+pale <- colorNumeric(palette = "Reds",
+                     domain = covid_provinciass$confirmados)
+
+leaflet(covid_provinciass)%>%
+  addTiles()%>%
+  setView(lat=10,lng = -83.7534256, zoom=7) %>%
+addPolygons(
+  fillColor= ~pale(confirmados),
+  stroke = TRUE,
+  fillOpacity = 0.9,
+  color= "white",
+  weight=0.3,
+  popup = paste("Canton:",covid19_cantones$canton, "<br>",
+                "Confirmados: ",covid19_cantones$confirmados, "<br>",
+                "Fallecidos: ",covid19_cantones$fallecidos, "<br>",
+                "Recuperados: ",covid19_cantones$recuperados, "<br>",
+                "Activos: ",covid19_cantones$activos, "<br>"))
 ```
-### Chart D
+### Registros de presencia de Covid
+```{r}
+covid19_cantones%>%
+  select(canton,confirmados, recuperados,muertes)%>%
+  arrange(canton)%>%
+  st_drop_geometry()%>%
+  kable()%>%
+  kable_styling()%>%
+  scroll_box(
+    width = "600px", 
+    height = "400px", 
+    fixed_thead = TRUE)
+```
+
 
